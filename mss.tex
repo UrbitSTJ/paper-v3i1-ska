@@ -72,7 +72,7 @@ dynamically generated code.  Unlike other languages, Nock does not have a notion
 
 Examples when we cannot do that, such as receiving code
 to evaluate over the wire, or from the outer virtualization context via Nock 12, or as a product of a complex expression where we cannot reliably execute it at compile time, are rare.  In practice, these exceptions are limited to either evaluating
-dynamically-supplied code or running the Hoon compiler at run time, e.g. in vase mode.\footnote{See \patp{lagrev-nocfep}, pp.~131–153 in \emph{Urbit Systems Technical Journal} vol.\ 2 issue 1 for more information on vase mode.}  For all other cases, e.g. Arvo, Gall agents, the subject's code contents do not often change and the result of static analysis is likely to be reused until a kernel upgrade or Gall agent upgrade respectively.
+dynamically-supplied code or running the Hoon compiler at run time, e.g. in vase mode.\footnote{See \patp{lagrev-nocfep}, \emph{Urbit Systems Technical Journal} vol.\ 2 issue 1, pp.~131–153, for more information on vase mode.}  For all other cases, e.g. Arvo, Gall agents, the subject's code contents do not often change and the result of static analysis is likely to be reused until a kernel upgrade or Gall agent upgrade respectively.
 
 Thus ``Subject Knowledge Analysis'' (\textsc{ska}) is the name for this static analysis procedure:  given a pair of a subject and a formula, we construct the call graph for all Nock 2 sites for which we have enough information, yielding call graph information and subject mask.  A new subject-formula pair where the formula is equal to the analyzed formula, and the parts of the subject included in the mask are equal to the same parts from the previously analyzed subject, is considered to be equivalent.  Consider analyzing the subject-formula pair:
 
@@ -84,12 +84,7 @@ Then a pair \lstinline[style=listingcode]{[[dec 2] [%9 2 %10 [6 %0 3] %0 2]]} is
 
 \section{Motivation}
 
-In prior work on \textsc{ska} by `~ritpub-sipsyl` and `~master-morzod`, the analysis was
-considered as a first step in Nock compilation to static single assignment
-intermediary representation language (SSA IR) to introduce direct calls in Nock.
-In their absence, Nock registerization, or any kind of optimization/analysis for
-that matter is limited by the lack of knowledge about the call target and the
-call product: in the SSA IR example, we would not know which parts of a call's
+In prior work on \textsc{ska} by \patp{ritpub-sipsyl} and \patp{master-morzod}, the analysis was considered as a first step in compiling Nock to a static single assignment intermediary representation language (\textsc{ssa} IR) to introduce direct calls in Nock. In their absence, Nock registerization, or any kind of optimization/analysis for that matter is limited by the lack of knowledge about the call target and the call product: in the \textsc{ssa} IR example, we would not know which parts of a call's
 subject are actually used by the callee program.
 
 For the current work, a simpler goal was set: the introduction of direct calls
@@ -482,7 +477,7 @@ union list with current subject provenance, effectively applying the provenance
 transformation of the cached call to the new subject.
 
 Caching finalized calls turned out to be not enough, which was demonstrated by
-`~ritpub-sipsyl` and `~master-morzod` at
+\patp{ritpub-sipsyl} and \patp{master-morzod} at
 [Lake Summit](https://www.youtube.com/watch?v=z24zWdHfVfI).  To prevent
 reanalyzing cycles in highly mutually-recursive code like the Hoon compiler,
 caching of non-finalized calls was also necessary.  Similarly to finalized-call
@@ -630,24 +625,12 @@ refcounting/allocating/freeing operations and interpreter overhead (figures 6,
 |:--:| 
 | *Figure 7.  Flame graph for Ackermann function computation with \lstinline[style=listingcode]{%ska} hint* |
 
-When it comes to the performance of the \textsc{ska} algorithm itself, the results were
-surprising.  Paradoxically, analyzing `+mint:ut` call itself took ~m1, while
-analyzing the entirety of `hoon.hoon`, including `+mint:ut`, takes ~s13.  The
-The reason appears to be a lack of knowledge in the solo `+mint:ut` call case,
-causing excessive backtracking due to wrong non-finalized call cache hits.
-In addition, every time the loop analysis was discarded, all caches were also
-discarded, leading to making more work multiple times when compared to the
-`hoon.hoon` case.  In the latter case, no wrong cache hits were made.
+\sloppy
+When it comes to the performance of the \textsc{ska} algorithm itself, the results were sometimes surprising.  Paradoxically, analyzing \lstinline[style=listingcode]{+mint:ut} call itself took \lstinline[style=listingcode]{~m1}, while analyzing the entirety of \lstinline[style=listingcode]{hoon.hoon}, including \lstinline[style=listingcode]{+mint:ut}, takes \lstinline[style=listingcode]{~s13}.  The reason appears to be a lack of knowledge in the solo \lstinline[style=listingcode]{+mint:ut} call case, causing excessive backtracking due to wrong non-finalized call cache hits (thus validating \textsc{ska}'s fundamental thesis). In addition, every time the loop analysis was discarded, all caches were also discarded, leading to making more work multiple times when compared to the \lstinline[style=listingcode]{hoon.hoon} case.  In the latter case, no wrong cache hits were made.
 
-## Future work
+\section{Conclusion and future work}
 
-There appear to be two directions for this project.  One, more short-term
-oriented is proper integration with Vere, e.g., making compiled \textsc{ska} bytecode
-caches persistent and integrating cold states of Vere and \textsc{ska}.  Another,
-long-term direction is continuing `~ritpub-sipsyl`'s original vision by
-implementing SSA IR compilation, which would ameliorate allocation overhead
-caused by cell churning during temporary core construction for calls and
-deconstruction to get function arguments. \tombstone
+There appear to be two viable future directions for this project.  One, more short-term oriented is proper integration with Vere, e.g., making compiled \textsc{ska} bytecode caches persistent and integrating cold states of Vere and \textsc{ska}.  A longer-term direction would continue \patp{ritpub-sipsyl}'s original vision by implementing \textsc{ssa} IR compilation, which would ameliorate allocation overhead caused by cell churning during temporary core construction for calls and deconstruction to get function arguments.\footnote{Compare the rationale for the implementation of the \lstinline[style=listingcode]{#} hax edit instruction in Nock 4K (\patp{lagrev-nocfep} and \patp{sorreg-namtyv}\emph{Urbit Systems Technical Journal} vol.\ 2 issue 1, pp.~155–190).}\tombstone
 
 \selectlanguage{USenglish}
 \printbibliography
