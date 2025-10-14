@@ -267,7 +267,7 @@ parent vertex enumeration label with the latch of the latest SCC on the loop
 stack.  If the parent vertex is greater than the latch, a new SCC data structure 
 is pushed on the stack; otherwise, the top SCC's entry and latch are updated, and
 then that SCC is repeatedly merged with the one beneath it if the connection
-condition is satisfied: the entry of the updated SCC is greater than or equal to
+condition is satisfied: the entry of the updated SCC is less than or equal to
 the latch of the preceding SCC.
 
 Let us prove that this comparison is sufficient.  Recall that the enumeration
