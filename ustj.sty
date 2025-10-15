@@ -15,7 +15,7 @@
 \renewcommand{\setmonofont}{\monofont}
 \renewcommand{\texttt}[1]{{\monofont #1}}
 % Define a new font family for small caps with FakeSlant
-\newfontfamily\slantedsmallcapsfont{Linux Libertine O}[
+\newfontfamily\slantedsmallcapsfont{Libertinus Serif}[
     FakeSlant = 0.1 % Adjust the slant amount as needed
 ]
 % Redefine \textsc to make small caps 25% larger
@@ -159,7 +159,7 @@
 
 % Turn off when producing release version.
 \usepackage{lineno}
-% \linenumbers
+\linenumbers
 
 % Bibliography management
 \usepackage[
@@ -314,3 +314,6 @@
     \thispagestyle{empty}%
     \addtocounter{page}{-1}%
     \newpage}
+
+
+\usepackage{subcaption}
