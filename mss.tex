@@ -2,6 +2,13 @@
 
 \usepackage{ustj}
 
+\usepackage{tikz}
+\newcommand{\bit}[1]{%
+  \tikz[baseline=(char.base)]{%
+    \node[shape=rectangle, draw, rounded corners=1pt, inner sep=1pt, minimum width=6pt, minimum height=6pt] (char) {#1};
+  }%
+}
+
 \addbibresource{mss.bib}
 
 \newcommand{\authorname}{K. Afonin}
@@ -171,6 +178,45 @@ The abstract call graph may contain cycles.  Figure \ref{fig:dec-abstract} shows
   \label{fig:dec-abstract}
   \caption{Abstract call graph for \texttt{(dec 42)}.}
 \end{figure}
+
+\begin{figure}[htp]
+  \centering
+    \centering
+    \begin{tikzpicture}[
+      node distance=3cm,
+      every node/.style={circle, draw, minimum size=0.5cm, thick},
+      >=stealth
+    ]
+      % Define the four nodes in a square
+      \node[vertex, thick] (Root) at (0,1.5) {};
+      \node[vertex, thick] (dec) at (-1.5,0) {};
+      \node[vertex, thick] (dollar) at (1.5,0) {};
+
+      \draw[->, thick] (Root) -- (dec);
+      \draw[->, thick] (Root) -- (dollar);
+      % make it a big loop below from dollar to dollar
+      \draw[->, thick, loop below] (dollar) to (dollar);
+
+      % add a label to the right of vertex Root, no border
+      \node[above, draw=none] at (Root.north) {\texttt{(dec 42)}};
+      % add a label to the left of vertex dec
+      \node[left, draw=none] at (dec.west) {\texttt{dec}};
+      % add a label to the right of vertex dollar
+      \node[right, draw=none] at (dollar.east) {\texttt{\$:dec}};
+
+      % \draw[->, very thick] (A) -- node[above, draw=none] {L} (B);
+      % \draw[->, very thick] (A) -- node[left, draw=none] {R} (C);
+
+      % \draw[->, dashed, thick] (B) -- node[right, draw=none] {R} (C);
+      % \draw[->, dashed, thick] (B) -- node[left, draw=none] {L} (D);
+
+      % \draw[->, dotted, thick, bend left=20] (C) to node[above, draw=none] {L} (D);
+      % \draw[->, dotted, thick, bend right=20] (C) to node[below, draw=none] {R} (D);
+    \end{tikzpicture}
+  \caption{The noun \texttt{[[a a a] a a] [a a a]} as a binary tree and its metadata labeling in a directed graph representation.}
+  \label{fig:binary-tree-dag}
+\end{figure}
+
 
 When we traverse that call graph, we cannot simply follow the edge from \lstinline[style=inlinecode]{$:dec} to itself, as doing so would cause an infinite loop in the algorithm.  Instead, when we detect a loop call, or a \emph{backedge}, we immediately return an unknown result from the child call.  As we traverse the call graph, we enumerate the vertices, as shown in Figure 2.
 
@@ -364,7 +410,7 @@ The Nock bytecode struct was extended with an array of direct call information s
 
 \begin{lstlisting}[style=listingcode_c]
 /* u3n_dire: direct call information
-  */
+ */
 typedef struct {
   u3p(u3n_prog)  pog_p;
   u3j_harm*      ham_u;
