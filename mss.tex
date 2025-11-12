@@ -174,57 +174,56 @@ The abstract call graph may contain cycles.  Figure \ref{fig:dec-abstract} shows
 
 \begin{figure}
   \centering
-  \includegraphics[width=0.8\textwidth]{fig/dec_abstract.png}
-  \label{fig:dec-abstract}
-  \caption{Abstract call graph for \texttt{(dec 42)}.}
-\end{figure}
-
-\begin{figure}[htp]
-  \centering
-    \centering
     \begin{tikzpicture}[
       node distance=3cm,
       every node/.style={circle, draw, minimum size=0.5cm, thick},
       >=stealth
     ]
-      % Define the four nodes in a square
-      \node[vertex, thick] (Root) at (0,1.5) {};
-      \node[vertex, thick] (dec) at (-1.5,0) {};
-      \node[vertex, thick] (dollar) at (1.5,0) {};
+      \node[thick] (Root) at (0,1.5) {};
+      \node[thick] (dec) at (-1.5,0) {};
+      \node[thick] (dollar) at (1.5,0) {};
 
       \draw[->, thick] (Root) -- (dec);
       \draw[->, thick] (Root) -- (dollar);
-      % make it a big loop below from dollar to dollar
-      \draw[->, thick, loop below] (dollar) to (dollar);
+      \draw[->, thick, loop below] (dollar) to [out=330, in=210, looseness=18](dollar);
 
-      % add a label to the right of vertex Root, no border
-      \node[above, draw=none] at (Root.north) {\texttt{(dec 42)}};
-      % add a label to the left of vertex dec
+      \node[above right, draw=none] at (Root.north) {\texttt{(dec 42)}};
       \node[left, draw=none] at (dec.west) {\texttt{dec}};
-      % add a label to the right of vertex dollar
       \node[right, draw=none] at (dollar.east) {\texttt{\$:dec}};
-
-      % \draw[->, very thick] (A) -- node[above, draw=none] {L} (B);
-      % \draw[->, very thick] (A) -- node[left, draw=none] {R} (C);
-
-      % \draw[->, dashed, thick] (B) -- node[right, draw=none] {R} (C);
-      % \draw[->, dashed, thick] (B) -- node[left, draw=none] {L} (D);
-
-      % \draw[->, dotted, thick, bend left=20] (C) to node[above, draw=none] {L} (D);
-      % \draw[->, dotted, thick, bend right=20] (C) to node[below, draw=none] {R} (D);
     \end{tikzpicture}
-  \caption{The noun \texttt{[[a a a] a a] [a a a]} as a binary tree and its metadata labeling in a directed graph representation.}
-  \label{fig:binary-tree-dag}
+  \caption{Abstract call graph for \texttt{(dec 42)}.}
+  \label{fig:dec-abstract}
 \end{figure}
 
-
-When we traverse that call graph, we cannot simply follow the edge from \lstinline[style=inlinecode]{$:dec} to itself, as doing so would cause an infinite loop in the algorithm.  Instead, when we detect a loop call, or a \emph{backedge}, we immediately return an unknown result from the child call.  As we traverse the call graph, we enumerate the vertices, as shown in Figure 2.
+When we traverse that call graph, we cannot simply follow the edge from \lstinline[style=inlinecode]{$:dec} to itself, as doing so would cause an infinite loop in the algorithm.  Instead, when we detect a loop call, or a \emph{backedge}, we immediately return an unknown result from the child call.  As we traverse the call graph, we enumerate the vertices, as shown in Figure \ref{fig:dec-ska}.
 
 \begin{figure}[h]
   \centering
-  \includegraphics[width=0.8\textwidth]{fig/dec-ska.png}
-  \label{fig:dec-ska}
+  % \includegraphics[width=0.8\textwidth]{fig/dec-ska.png}
+  \begin{tikzpicture}[
+    node distance=3cm,
+    every node/.style={circle, draw, minimum size=0.5cm, thick},
+    >=stealth
+  ]
+    \node[thick] (Root) at (0,1.5) {};
+    \node[thick] (dec) at (-1.5,0) {};
+    \node[thick] (dollar) at (1.5,0) {};
+    \node[thick] (dollarwut) at (1.5,-1.5) {};
+
+    \draw[->, thick] (Root) -- (dec);
+    \draw[->, thick] (Root) -- (dollar);
+    \draw[->, thick, loop below] (dollar) -- (dollarwut);
+    \draw[thick, dashed](dollar) to[out=225, in=135, looseness=1.5](dollarwut);
+
+
+    \node[draw=none] at (0,2) {\texttt{0x0: (dec 42)}};
+    \node[left, draw=none] at (dec.west) {\texttt{0x1: dec}};
+    \node[right, draw=none] at (dollar.east) {\texttt{0x2: \$:dec}};
+    \node[right, draw=none] at (dollarwut.east) {\texttt{0x3: \$:dec?}};
+    \node[draw=none] at (0.2,-0.75) {\footnotesize \texttt{0x2 == 0x3}};
+  \end{tikzpicture}
   \caption{Call graph for \texttt{(dec 42)} in the middle of\textsc{ska}. Vertices \texttt{0x2} and \texttt{0x3} form a loop (strongly connected component, \textsc{scc}) with vertex \texttt{0x2} being the entry point (magenta), and vertex \texttt{0x3} being the latest (i.e. rightmost, deepest) vertex that belongs to that \textsc{scc}, also called a \emph{latch} of this \textsc{scc} (orange). The dashed gray line denotes the loop assumptions that are to be validated upon exit from the \textsc{scc} entry point. Vertex \texttt{0x3} is not analyzed through.}
+  \label{fig:dec-ska}
 \end{figure}
 
 Figure \ref{fig:dec-ska} also demonstrates that the \textsc{ska} representation of the call graph is acyclic: back-pointing edges are replaced with a forward-pointing edge to a new vertex that we do not analyze through.  Together with the fact that both branches are traversed in Nock 6 analysis, \textsc{ska} call graph traversal becomes a genuine depth-first, head-first traversal.
@@ -246,7 +245,25 @@ Let us prove that this comparison is sufficient.  Recall that the enumeration la
 
 \begin{figure}[h]
   \centering
-  \includegraphics[width=0.8\textwidth]{fig/parent-eq-latch.png}
+  % \includegraphics[width=0.8\textwidth]{fig/parent-eq-latch.png}
+  \begin{tikzpicture}[
+    node distance=3cm,
+    every node/.style={circle, draw, minimum size=0.5cm, thick},
+    >=stealth
+  ]
+    \node[thick] (top) at (0,1.5) {};
+    \node[thick] (mid) at (0,0) {};
+    \node[thick] (bot) at (0,-1.5) {};
+
+    \draw[->, thick] (mid) to[out=190, in=170, looseness=4](top);
+    \draw[->, thick] (top) -- (mid);
+    \draw[->, thick] (bot) to[out=350, in=10, looseness=4](mid);
+    \draw[->, thick] (mid) -- (bot);
+
+    \node[right, draw=none] at (top.east) {\texttt{0x0}};
+    \node[below right, draw=none] at (mid.east) {\texttt{0x1}};
+    \node[left, draw=none] at (bot.west) {\texttt{0x2}};
+  \end{tikzpicture}
   \caption{New backedge points to the latch of previous \textsc{scc}, extending that \textsc{scc}.}
   \label{fig:parent-eq-latch}
 \end{figure}
@@ -255,7 +272,63 @@ If the parent label is greater than the latch, then either they are on the same 
 
 \begin{figure}
   \centering
-  \includegraphics[width=0.8\textwidth]{fig/parent-gth-latch.png}
+  % \includegraphics[width=0.8\textwidth]{fig/parent-gth-latch.png}
+  \begin{subfigure}{0.3\textwidth}
+    \centering
+    \begin{tikzpicture}[
+      node distance=3cm,
+      every node/.style={circle, draw, minimum size=0.5cm, thick},
+      >=stealth
+    ]
+      \node[thick] (one) at (0,1.5) {};
+      \node[thick,double] (two) at (0,0) {};
+      \node[thick] (tri) at (0,-1.5) {};
+      \node[very thick] (qua) at (0,-3) {};
+      \node[thick,double] (pen) at (0,-4.5) {};
+
+      \draw[->, thick] (one) -- (two);
+      \draw[->, thick] (two) -- (tri);
+      \draw[->, thick] (tri) -- (qua);
+      \draw[->, thick] (qua) -- (pen);
+      \draw[->, thick] (two) to[out=190, in=170, looseness=2](one);
+      \draw[->, thick] (pen) to[out=190, in=170, looseness=1](tri);
+
+      \node[right, draw=none] at (one.east) {\texttt{0x0}};
+      \node[right, draw=none] at (two.east) {\texttt{0x1}};
+      \node[right, draw=none] at (tri.east) {\texttt{0x2}};
+      \node[right, draw=none] at (qua.east) {\texttt{0x3}};
+      \node[right, draw=none] at (pen.east) {\texttt{0x4}};
+    \end{tikzpicture}
+  \end{subfigure}
+  \hspace{0.05\textwidth}
+  \begin{subfigure}{0.3\textwidth}
+    \centering
+    \begin{tikzpicture}[
+      % node distance=3cm,
+      every node/.style={circle, draw, minimum size=0.5cm, thick},
+      >=stealth
+    ]
+      \node[thick] (one) at (0,1.5) {};
+      \node[very thick] (two) at (0,0) {};
+      \node[thick,double] (tri) at (-1.5,-1.5) {};
+      \node[thick] (qua) at (1.5,-1.5) {};
+      \node[thick,double] (pen) at (1.5,-3) {};
+
+      \draw[->, thick] (one) -- (two);
+      \draw[->, thick] (two) -- (tri);
+      \draw[->, thick] (two) -- (qua);
+      \draw[->, thick] (qua) -- (pen);
+      \draw[->, thick] (tri) to[out=100, in=170, looseness=1](one);
+      \draw[->, thick] (pen) to[out=190, in=170, looseness=2](qua);
+
+      \node[right, draw=none] at (one.east) {\texttt{0x0}};
+      \node[right, draw=none] at (two.east) {\texttt{0x1}};
+      \node[right, draw=none] at (tri.east) {\texttt{0x2}};
+      \node[right, draw=none] at (qua.east) {\texttt{0x3}};
+      \node[right, draw=none] at (pen.east) {\texttt{0x4}};
+    \end{tikzpicture}
+  \end{subfigure}
+  \hspace{0.2\textwidth}
   \caption{A new backedge points to a vertex with a label greater than the latch of the previous \textsc{scc}, creating a new \textsc{scc} with \texttt{0x2} as entry and \texttt{0x4} as latch on the left, and \texttt{0x3} as an entry and \texttt{0x4} as a latch on the right.}
   \label{fig:parent-gth-latch}
 \end{figure}
@@ -275,7 +348,65 @@ the parent are on the same root path, making the kid, parent vertices, and verti
 
 \begin{figure}[h]
   \centering
-  \includegraphics[width=0.8\textwidth]{fig/parent-lth-latch.png}
+  % \includegraphics[width=0.8\textwidth]{fig/parent-lth-latch.png}
+  \begin{subfigure}{0.3\textwidth}
+    \centering
+    \begin{tikzpicture}[
+      node distance=3cm,
+      every node/.style={circle, draw, minimum size=0.5cm, thick},
+      >=stealth
+    ]
+      \node[thick] (one) at (0,1.5) {};
+      \node[very thick] (two) at (0,0) {};
+      \node[thick,double] (tri) at (0,-1.5) {};
+      \node[very thick] (qua) at (0,-3) {};
+      \node[thick,double] (pen) at (0,-4.5) {};
+
+      \draw[->, thick] (one) -- (two);
+      \draw[->, thick] (two) -- (tri);
+      \draw[->, thick] (tri) -- (qua);
+      \draw[->, thick] (qua) -- (pen);
+      \draw[->, thick] (tri) to[out=190, in=170, looseness=1](one);
+      \draw[->, thick] (pen) to[out=190, in=170, looseness=0.667](two);
+      \draw[->, thick, dashed](tri) to[out=225, in=135, looseness=1](pen);
+
+      \node[right, draw=none] at (one.east) {\texttt{0x0}};
+      \node[right, draw=none] at (two.east) {\texttt{0x1}};
+      \node[right, draw=none] at (tri.east) {\texttt{0x2}};
+      \node[right, draw=none] at (qua.east) {\texttt{0x3}};
+      \node[right, draw=none] at (pen.east) {\texttt{0x4}};
+    \end{tikzpicture}
+  \end{subfigure}
+  \hspace{0.05\textwidth}
+  \begin{subfigure}{0.3\textwidth}
+    \centering
+    \begin{tikzpicture}[
+      % node distance=3cm,
+      every node/.style={circle, draw, minimum size=0.5cm, thick},
+      >=stealth
+    ]
+      \node[thick] (one) at (0,1.5) {};
+      \node[very thick] (two) at (0,0) {};
+      \node[thick,double] (tri) at (-1.5,-1.5) {};
+      \node[very thick] (qua) at (1.5,-1.5) {};
+      \node[thick,double] (pen) at (1.5,-3) {};
+
+      \draw[->, thick] (one) -- (two);
+      \draw[->, thick] (two) -- (tri);
+      \draw[->, thick] (two) -- (qua);
+      \draw[->, thick] (qua) -- (pen);
+      \draw[->, thick] (tri) to[out=100, in=170, looseness=1](one);
+      \draw[->, thick] (pen) to[out=190, in=270, looseness=1](two);
+      \draw[->, thick, dashed](tri) to[out=300, in=225, looseness=1](pen);
+
+      \node[right, draw=none] at (one.east) {\texttt{0x0}};
+      \node[right, draw=none] at (two.east) {\texttt{0x1}};
+      \node[right, draw=none] at (tri.east) {\texttt{0x2}};
+      \node[right, draw=none] at (qua.east) {\texttt{0x3}};
+      \node[right, draw=none] at (pen.east) {\texttt{0x4}};
+    \end{tikzpicture}
+  \end{subfigure}
+  \hspace{0.2\textwidth}
   \caption{A new backedge points to a vertex with a label less than the latch of the previous \textsc{scc}, extending that \textsc{scc} and moving the latch to a new position.}
   \label{fig:parent-lth-latch}
 \end{figure}
