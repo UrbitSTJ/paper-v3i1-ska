@@ -21,8 +21,8 @@
 \fancyhead{}
 \fancyfoot[L]{{\footnotesize
               %% We toggle between these:
-              Manuscript submitted for review.\\
-              % {\it Urbit Systems Technical Journal} I:1 (2024):  1–3. \\
+              % Manuscript submitted for review.\\
+              {\it Urbit Systems Technical Journal} III:1 (2026):  43–67. \\
               ~ \\
               Address author correspondence to \authorpatp.
               }}
@@ -48,7 +48,7 @@
 
 % We will adjust page numbering in final editing.
 \pagenumbering{arabic}
-\setcounter{page}{1}
+\setcounter{page}{43}
 
 \tableofcontents
 
@@ -237,7 +237,7 @@ the entry point (the earliest vertex that has a backedge pointing to it) and the
 \emph{latch} (the latest vertex that has a backedge originating from it).
 
 \begin{quote}
-\textbf{Proof.} Suppose that we encounter a new backedge.  To determine whether it forms a new \textsc{scc}, or belongs to an already existing one, it is sufficient to compare the parent vertex enumeration label with the latch of the latest \textsc{scc} on the loop stack.  If the parent vertex is greater than the latch, a new \textsc{scc} data structure is pushed on the stack; otherwise, the top \textsc{scc}'s entry and latch are updated, and then that \textsc{scc} is repeatedly merged with the one beneath it if the connection condition is satisfied: the entry of the updated \textsc{scc} is less than or equal to the latch of the preceding \textsc{scc}.
+\textbf{Proof.} Suppose that we encounter a new backedge.  To determine whether it forms a new \textsc{scc}, or belongs to an already existing one, it is sufficient to compare the parent vertex enumeration label with the latch of the latest \textsc{scc} on the loop stack.  If the parent vertex is greater than the latch, a new \textsc{scc} data structure is pushed on the stack; otherwise, the top \textsc{scc}'s entry and latch are updated, and then that \textsc{scc} is repeatedly merged with the one beneath it if the connection condition is satisfied: the entry of the updated \textsc{scc} is less than or equal to the latch of the preceding \textsc{scc}.  \textsc{qed}.
 \end{quote}
 
 \noindent
@@ -343,8 +343,11 @@ If they are not, then the latch still has to be a parent's \mbox{descendant}.  L
 
 \begin{quote}
 \textbf{Proof.}  Suppose that the opposite is true. Then the parent vertex is to the left of the latch, where ``A is to the left of B" means that A is entered before B and A is not B's predecessor.  The latch is either on the same root path as the kid or it is to the left of the kid vertex, since the latter is the latest vertex we discovered.  Since ``leftness" is transitive, that means that the parent is to the left of the kid, which is impossible since they are on the same root path.  Contradiction: the latch and
-the parent are on the same root path, making the kid, parent vertices, and vertices between them parts of the existing \textsc{scc}.  Illustrations for both scenarios are shown in Figure \ref{fig:parent-lth-latch}.
+the parent are on the same root path, making the kid, parent vertices, and vertices between them parts of the existing \textsc{scc}.  \textsc{qed}.
 \end{quote}
+
+\noindent
+Illustrations for both scenarios are shown in Figure \ref{fig:parent-lth-latch}.
 
 \begin{figure}[h]
   \centering
@@ -411,7 +414,6 @@ the parent are on the same root path, making the kid, parent vertices, and verti
   \label{fig:parent-lth-latch}
 \end{figure}
 
-\noindent
 The condition for \textsc{scc} merging in case of \textsc{scc} extension is the same.  In fact \textsc{scc} extension can be represented in terms of \textsc{scc} creation, together with merging with the topmost \textsc{scc} in the loop stack.
 
 \subsection{Cycle Validation, Code Usage Distribution, Fixed-Point Search}
@@ -436,7 +438,7 @@ Steps 1 and 3 are necessary because otherwise, if we distribute just the subject
 
 It is important to have a sense of scale when dealing with \textsc{ska}.  Consider, for example, Urbit's standard library core \lstinline[style=inlinecode]{zuse}.  How many nouns are there in total in that library?  In Arvo 409K:
 
-\begin{lstlisting}[style=listingcode]
+\begin{lstlisting}[style=listingblock]
 > =/  n=*  ..zuse
   |-  ^-  @
   ?@  n  1                    ::  atom is one noun
@@ -512,7 +514,7 @@ The integration of \textsc{ska} analysis into Vere was done in the simplest imag
 
 In addition to producing call graph information, the \textsc{ska} algorithm also produced desugared, annotated Nock-like code called Nomm (a sort of Nock-{}-).  The practical difference, apart from Nock 9 and Nock 8 expanded into other Nock operators, is the annotation data in Nock 2.  The version of Nomm that is provided for use with the Vere development fork with \textsc{ska}, \lstinline[style=inlinecode]{$nomm-1}, is mostly indistinguishable from \lstinline[style=inlinecode]{$nock} proper:
 
-\begin{lstlisting}[style=listingcode]
+\begin{lstlisting}[style=listingblock]
 +$  nomm-1
   $^  [nomm-1 nomm-1]
   $%  [%1 p=*]
@@ -559,7 +561,7 @@ where
 \end{itemize}
 
 \noindent\sloppy
-Another addition to the road struct was a field for the \mbox{analysis} core \lstinline[style=inlinecode]{+ka}. A jammed cell of four pre-parsed Hoon ASTs for \textsc{ska} source files was added to Vere source code, which was unpacked and built into a core when the \textsc{ska} entry point was executed with \lstinline[style=inlinecode]{+ka} core not being initialized.
+Another addition to the road struct was a field for the \mbox{analysis} core \lstinline[style=inlinecode]{+ka}. A jammed cell of four pre-parsed Hoon \textsc{ast}s for \textsc{ska} source files was added to Vere source code, which was unpacked and built into a core when the \textsc{ska} entry point was executed with \lstinline[style=inlinecode]{+ka} core not being initialized.
 
 \subsection{Analysis lifecycle}
 
