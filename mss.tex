@@ -510,7 +510,7 @@ Unlike loop calls, the fixpoint search is not necessary since the cached call an
 
 The integration of \textsc{ska} analysis into Vere was done in the simplest imaginable way as a proof of concept.  The road struct was updated to include bytecode caches for \textsc{ska}-produced code and to house the analysis core.  A static hint \lstinline[style=inlinecode]{%ska} was added as an entry point into the analysis-compilation lifecycle.
 
-\subsection{Nomm (Nock--)}
+\subsection{Nomm (Nock-{}-)}
 
 In addition to producing call graph information, the \textsc{ska} algorithm also produced desugared, annotated Nock-like code called Nomm (a sort of Nock-{}-).  The practical difference, apart from Nock 9 and Nock 8 expanded into other Nock operators, is the annotation data in Nock 2.  The version of Nomm that is provided for use with the Vere development fork with \textsc{ska}, \lstinline[style=inlinecode]{$nomm-1}, is mostly indistinguishable from \lstinline[style=inlinecode]{$nock} proper:
 
@@ -592,6 +592,13 @@ Once the bytecode program for the entry point function and all its descendants w
 
 The effect of the \lstinline[style=inlinecode]{%ska} hint on performance was compared for the Ackermann function and for a simple algorithm to iterate over a list and compute on its values.  In both cases, the performance gain was around 1.7x.  The main overhead in computations with direct calls appears to come from refcounting/allocating/freeing operations and interpreter overhead (Figure \ref{fig:ackermann_noska} and Figure \ref{fig:ackermann_ska}).
 
+\sloppy
+When it comes to the performance of the \textsc{ska} algorithm itself, the results were sometimes surprising.  Paradoxically, analyzing \lstinline[style=inlinecode]{+mint:ut} call itself took \lstinline[style=inlinecode]{~m1}, while analyzing the entirety of \lstinline[style=inlinecode]{hoon.hoon}, including \lstinline[style=inlinecode]{+mint:ut}, takes \lstinline[style=inlinecode]{~s13}.  The reason appears to be a lack of knowledge in the solo \lstinline[style=inlinecode]{+mint:ut} call case, causing excessive backtracking due to wrong non-finalized call cache hits (thus validating \textsc{ska}'s fundamental thesis). In addition, every time the loop analysis was discarded, all caches were also discarded, leading to making more work multiple times when compared to the \lstinline[style=inlinecode]{hoon.hoon} case.  In the latter case, no wrong cache hits were made.
+
+\section{Conclusion and future work}
+
+There appear to be two viable future directions for this project.  One, more short-term oriented is proper integration with Vere, e.g., making compiled \textsc{ska} bytecode caches persistent and integrating cold states of Vere and \textsc{ska}.  A longer-term direction would continue \patp{ritpub-sipsyl}'s original vision by implementing \textsc{ssa ir} compilation, which would ameliorate allocation overhead caused by cell churning during temporary core construction for calls and deconstruction to get function arguments.\footnote{Compare the rationale for the implementation of the \lstinline[style=inlinecode]{#} hax edit instruction in Nock 4K.  (See \patp{lagrev-nocfep} and \patp{sorreg-namtyv}, ``A Documentary History of the Nock Combinator Calculus'', \ssc{ustj} vol. 2 iss. 1, pp.~75–82, for historical context.)}\tombstone
+
 \begin{figure}
   \centering
   \includegraphics[width=\textwidth]{fig/perf_409_debug_999_noska.png}
@@ -607,13 +614,6 @@ The effect of the \lstinline[style=inlinecode]{%ska} hint on performance was com
   \caption{Flame graph for Ackermann function computation with \texttt{\%ska} hint.}
   \label{fig:ackermann_ska}
 \end{figure}
-
-\sloppy
-When it comes to the performance of the \textsc{ska} algorithm itself, the results were sometimes surprising.  Paradoxically, analyzing \lstinline[style=inlinecode]{+mint:ut} call itself took \lstinline[style=inlinecode]{~m1}, while analyzing the entirety of \lstinline[style=inlinecode]{hoon.hoon}, including \lstinline[style=inlinecode]{+mint:ut}, takes \lstinline[style=inlinecode]{~s13}.  The reason appears to be a lack of knowledge in the solo \lstinline[style=inlinecode]{+mint:ut} call case, causing excessive backtracking due to wrong non-finalized call cache hits (thus validating \textsc{ska}'s fundamental thesis). In addition, every time the loop analysis was discarded, all caches were also discarded, leading to making more work multiple times when compared to the \lstinline[style=inlinecode]{hoon.hoon} case.  In the latter case, no wrong cache hits were made.
-
-\section{Conclusion and future work}
-
-There appear to be two viable future directions for this project.  One, more short-term oriented is proper integration with Vere, e.g., making compiled \textsc{ska} bytecode caches persistent and integrating cold states of Vere and \textsc{ska}.  A longer-term direction would continue \patp{ritpub-sipsyl}'s original vision by implementing \textsc{ssa ir} compilation, which would ameliorate allocation overhead caused by cell churning during temporary core construction for calls and deconstruction to get function arguments.\footnote{Compare the rationale for the implementation of the \lstinline[style=inlinecode]{#} hax edit instruction in Nock 4K.  (See \patp{lagrev-nocfep} and \patp{sorreg-namtyv}, ``A Documentary History of the Nock Combinator Calculus'', \ssc{ustj} vol. 2 iss. 1, pp.~75–82, for historical context.)}\tombstone
 
 % \selectlanguage{USenglish}
 % \printbibliography
