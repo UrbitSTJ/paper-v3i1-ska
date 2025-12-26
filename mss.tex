@@ -99,7 +99,7 @@ Then a pair \lstinline[style=inlinecode]{[[dec 2] [%9 2 %10 [6 %0 3] %0 2]]} is 
 In prior work on \textsc{ska} by \patp{ritpub-sipsyl} and \patp{master-morzod}, the analysis was considered as a first step in compiling Nock to a static single assignment intermediary representation language (\textsc{ssa ir}) to introduce direct calls in Nock. In their absence, Nock registerization, or any kind of optimization/analysis for that matter is limited by the lack of knowledge about the call target and the call product: in the \textsc{ssa ir} example, we would not know which parts of a call's subject are actually used by the callee program.
 
 \sloppy
-For the current work, a simpler goal was set: the introduction of direct calls and compile-time jet matching in the Vere bytecode interpreter.  Currently, the interpreter has to, first, look up a Nock bytecode program in the bytecode cache, and second, it has to dynamically perform a jet matching routine at each Nock 9 call site.\footnote{There has been ongoing work to ameliorate the situation, such as \href{https://github.com/frodwith/nockets}{\patp{}'s Nockets project}.}  With \textsc{ska}, the bytecode programs could have instructions for direct calls into other bytecode programs, and a program could also check if a given Nock 2 site matches some jet information the program has already accumulated, thus adding the jet driver directly into the bytecode stream if the match was obtained.
+For the current work, a simpler goal was set: the introduction of direct calls and compile-time jet matching in the Vere bytecode interpreter.  Currently, the interpreter has to, first, look up a Nock bytecode program in the bytecode cache, and second, it has to dynamically perform a jet matching routine at each Nock 9 call site.\footnote{There has been ongoing work to ameliorate the situation, such as \href{https://github.com/frodwith/nockets}{\patp{fodwyt-ragful}'s Nockets project}.}  With \textsc{ska}, the bytecode programs could have instructions for direct calls into other bytecode programs, and a program could also check if a given Nock 2 site matches some jet information the program has already accumulated, thus adding the jet driver directly into the bytecode stream if the match was obtained.
 
 \section{Core Algorithm}
 
@@ -230,17 +230,20 @@ Figure \ref{fig:dec-ska} also demonstrates that the \textsc{ska} representation 
 
 \subsection{Loops as strongly connected components}
 
-From the point of view of the abstract, cyclical call graph, a set of functions that cannot be finalized unless all functions from this set are finalized forms a strongly-connected component (\textsc{scc}) of that call graph.  Thus, handling of loops in \textsc{ska} becomes a question of handling \textsc{scc}s.\footnote{The algorithm that follows was developed by the author to detect and manage \textsc{scc}s during the analysis.  A reader well-versed in graph theory or PL theory will likely recognise it as some well-known algorithm, as it is not that special.  The author's ignorance of that subject, however, prevents him from adding a reference to that algorithm in the literature.}
+From the point of view of the abstract, cyclical call graph, a set of functions that cannot be finalized unless all functions from this set are finalized forms a strongly-connected component (\textsc{scc}) of that call graph.  Thus, handling of loops in \textsc{ska} becomes a question of handling \textsc{scc}s.  The algorithm that follows was developed by the author to detect and manage \textsc{scc}s during the analysis.  The process turned out to be quite similar to \citeauthor{Tarjan1972}'s \citeyear{Tarjan1972} algorithm for finding \textsc{scc}s with some differences:
+\begin{itemize}
+  \item  In Tarjan's algorithm, the graph is known ahead of time, while in \textsc{ska} the graph is simultaneously inferred with symbolic execution of Nock and traversed.
+  \item  Since Nock call graph is rooted, only one traversal is necessary, and in this traversal the descendants down the non-loop call edges are guaranteed to have higher index values.
+\end{itemize}
+
+The latter fact allows for simpler comparisons and simpler state management, allowing to have a stack of \textsc{scc}s instead of a stack of vertices that are popped when an \textsc{scc} is finalized. For example, when returning from a vertex which is a member of a non-trivial \textsc{scc} in \textsc{ska} we only have to check one boolean value and compare the index of this vertex with the index of the entry of the current \textsc{scc} with equality operator, so we do not have to call arithmetic functions and pay Nock function call overhead.
 
 As the call graph is traversed, we keep track of the stack of mutually independent \textsc{scc}s (that is, \textsc{scc}s whose unions are not \textsc{scc}s) by keeping track of
 the entry point (the earliest vertex that has a backedge pointing to it) and the
 \emph{latch} (the latest vertex that has a backedge originating from it).
 
-\begin{quote}
-\textbf{Proof.} Suppose that we encounter a new backedge.  To determine whether it forms a new \textsc{scc}, or belongs to an already existing one, it is sufficient to compare the parent vertex enumeration label with the latch of the latest \textsc{scc} on the loop stack.  If the parent vertex is greater than the latch, a new \textsc{scc} data structure is pushed on the stack; otherwise, the top \textsc{scc}'s entry and latch are updated, and then that \textsc{scc} is repeatedly merged with the one beneath it if the connection condition is satisfied: the entry of the updated \textsc{scc} is less than or equal to the latch of the preceding \textsc{scc}.  \textsc{qed}.
-\end{quote}
+Suppose that we encounter a new backedge.  To determine whether it forms a new \textsc{scc}, or belongs to an already existing one, it is sufficient to compare the parent vertex enumeration label with the latch of the latest \textsc{scc} on the loop stack.  If the parent vertex is greater than the latch, a new \textsc{scc} data structure is pushed on the stack; otherwise, the top \textsc{scc}'s entry and latch are updated, and then that \textsc{scc} is repeatedly merged with the one beneath it if the connection condition is satisfied: the entry of the updated \textsc{scc} is less than or equal to the latch of the preceding \textsc{scc}.
 
-\noindent
 Let us prove that this comparison is sufficient.  Recall that the enumeration labels are assigned in depth-first, head-first order.  If the backedge parent is equal to the latch of the \textsc{scc}, the kid is a part of the \textsc{scc} since the kid is reachable by an \textsc{scc} member, in this case, the parent, and a member of \textsc{scc} is reachable from kid via the backedge (Figure \ref{fig:parent-eq-latch}).
 
 \begin{figure}[h]
@@ -341,13 +344,8 @@ latest \textsc{scc} reachable from the parent.  Since the parent and the kid are
 \sloppy
 If they are not, then the latch still has to be a parent's \mbox{descendant}.  Let us sketch the proof by disproving the contrary.
 
-\begin{quote}
-\textbf{Proof.}  Suppose that the opposite is true. Then the parent vertex is to the left of the latch, where ``A is to the left of B" means that A is entered before B and A is not B's predecessor.  The latch is either on the same root path as the kid or it is to the left of the kid vertex, since the latter is the latest vertex we discovered.  Since ``leftness" is transitive, that means that the parent is to the left of the kid, which is impossible since they are on the same root path.  Contradiction: the latch and
-the parent are on the same root path, making the kid, parent vertices, and vertices between them parts of the existing \textsc{scc}.  \textsc{qed}.
-\end{quote}
-
-\noindent
-Illustrations for both scenarios are shown in Figure \ref{fig:parent-lth-latch}.
+Suppose that the opposite is true. Then the parent vertex is to the left of the latch, where ``A is to the left of B" means that A is entered before B and A is not B's predecessor.  The latch is either on the same root path as the kid or it is to the left of the kid vertex, since the latter is the latest vertex we discovered.  Since ``leftness" is transitive, that means that the parent is to the left of the kid, which is impossible since they are on the same root path.  Contradiction: the latch and
+the parent are on the same root path, making the kid, parent vertices, and vertices between them parts of the existing \textsc{scc}.  Illustrations for both scenarios are shown in Figure \ref{fig:parent-lth-latch}.
 
 \begin{figure}[h]
   \centering
@@ -615,6 +613,6 @@ There appear to be two viable future directions for this project.  One, more sho
   \label{fig:ackermann_ska}
 \end{figure}
 
-% \selectlanguage{USenglish}
-% \printbibliography
+\selectlanguage{USenglish}
+\printbibliography
 \end{document}
