@@ -78,14 +78,14 @@ The compound Nock 9 operator is defined in terms of other Nock operators:
 Evaluation of the formula from the second operator yields a noun, from which a formula to be evaluated is pulled with Nock 0.  That formula is then evaluated against that noun, which is often referred to as a ``core''.
 
 Since Nock 9 is essentially a macro for Nock 2, we can focus our attention on Nock 2.  This operator is equivalent to \lstinline[style=inlinecode]{eval} in other languages:  execution of
-dynamically generated code.  Unlike other languages, Nock does not have a notion of a static call, and \emph{all} function calls are implemented in terms of eval.  In practice, however, we can discover formula products \lstinline[style=inlinecode]{*[a c]} for almost all Nock 2 sites, given the subject.
+dynamically generated code.  Unlike most languages, Nock does not have a notion of a static call, and \emph{all} function calls are implemented in terms of \lstinline[style=inlinecode]{eval}.  In practice, however, we can discover formula products \lstinline[style=inlinecode]{*[a c]} for almost all Nock 2 sites, given the subject.
 
 \sloppy
 Examples when we cannot do that, such as receiving code
 to evaluate over the wire, or from the outer virtualization context via Nock 12, or as a product of a complex expression where we cannot reliably execute it at compile time, are rare.  In practice, these exceptions are limited to either evaluating
 dynamically-supplied code or running the Hoon compiler at run time, e.g. in vase mode.\footnote{See \patp{lagrev-nocfep}, \ssc{ustj} vol. 2 iss. 1, pp.~131–153, for more information on vase mode.}  For all other cases, e.g. Arvo, Gall agents, the subject's code contents do not often change and the result of static analysis is likely to be reused until a kernel upgrade or Gall agent upgrade respectively.
 
-Thus ``Subject Knowledge Analysis'' (\textsc{ska}) is the name for this static analysis procedure:  given a pair of a subject and a formula, we construct the call graph for all Nock 2 sites for which we have enough information, yielding call graph information and subject mask.  A new subject-formula pair where the formula is equal to the analyzed formula, and the parts of the subject included in the mask are equal to the same parts from the previously analyzed subject, is considered to be equivalent.  Consider analyzing the subject-formula pair:
+This static analysis procedure, dubbed ``Subject Knowledge Analysis'' (\textsc{ska}), is as follows:  given a pair of a subject and a formula, we construct the call graph for all Nock 2 sites for which we have enough information, yielding call graph information and subject mask.  A new subject-formula pair where the formula is equal to the analyzed formula, and the parts of the subject included in the mask are equal to the same parts from the previously analyzed subject, is considered to be equivalent.  Consider analyzing the subject-formula pair:
 
 \begin{lstlisting}[style=listingblock]
 [[dec 1] [%9 2 %10 [6 %0 3] %0 2]]
@@ -586,19 +586,16 @@ Once the bytecode program for the entry point function and all its descendants w
 
 \subsection{Benchmarks and Notable Results}
 
-The effect of the \lstinline[style=inlinecode]{%ska} hint on performance was compared for the Ackermann function and for a simple algorithm to iterate over a list and compute on its values.  In both cases, the performance gain was around 1.7$\times$.  The main overhead in computations with direct calls appears to come from refcounting/ allocating/freeing operations and interpreter overhead (Figures \ref{fig:ackermann_noska} and \ref{fig:ackermann_ska}).
+The effect of the \lstinline[style=inlinecode]{%ska} hint on performance was compared for the Ackermann function and a simple list iteration algorithm.  In both cases, the performance gain was around 1.7$\times$.  The main overhead in computations with direct calls appears to come from refcounting/ allocating/freeing operations and interpretation (Figures \ref{fig:ackermann_noska} and \ref{fig:ackermann_ska}).
 % XXX NED that space is there for alignment in line break
 
 \sloppy
 When it comes to the performance of the \textsc{ska} algorithm itself, the results were sometimes surprising.  Paradoxically, analyzing \lstinline[style=inlinecode]{+mint:ut} call itself took \lstinline[style=inlinecode]{~m1}, while analyzing the entirety of \lstinline[style=inlinecode]{hoon.hoon}, including \lstinline[style=inlinecode]{+mint:ut}, takes \lstinline[style=inlinecode]{~s13}.  The reason appears to be a lack of knowledge in the solo \lstinline[style=inlinecode]{+mint:ut} call case, causing excessive backtracking due to wrong non-finalized call cache hits (thus validating \textsc{ska}'s fundamental thesis). In addition, every time the loop analysis was discarded, all caches were also discarded, leading to making more work multiple times when compared to the \lstinline[style=inlinecode]{hoon.hoon} case.  In the latter case, no wrong cache hits were made.
 
-\section{Conclusion and future work}
-% \sloppy
-There appear to be two viable future directions for this project.  A short-term objective is a proper integration with the Vere runtime, such as making compiled \textsc{ska} bytecode caches {persistent} and integrating cold states of Vere and \textsc{ska}.  A longer-term direction would pursue \patp{ritpub-sipsyl}'s original vision by implementing \textsc{ssa ir} compilation, which would ameliorate \mbox{allocation} overhead caused by cell churning\footnote{Compare the rationale for the implementation of the \lstinline[style=inlinecode]{#} hax edit instruction in Nock 4K.  (See \patp{lagrev-nocfep} and \patp{sorreg-namtyv}, ``A Documentary History of the Nock Combinator Calculus'', \ssc{ustj} vol. 2 iss. 1, pp.~75–82, for historical context.)} during temporary core construction for calls and deconstruction to get function arguments.\tombstone
-
 \begin{figure}
   \centering
-  \includegraphics[width=\textwidth]{fig/perf_409_debug_999_noska.png}
+  % \includegraphics[width=\textwidth]{fig/perf_409_debug_999_noska.png}
+  \includegraphics[width=\textwidth]{fig/ack_comp_noska.png}
   \caption{Flame graph for Ackermann function computation without \texttt{\%ska} hint.}
   \label{fig:ackermann_noska}
 \end{figure}
@@ -607,10 +604,15 @@ There appear to be two viable future directions for this project.  A short-term 
 
 \begin{figure}
   \centering
-  \includegraphics[width=\textwidth]{fig/perf_409_debug_999.png}
+  % \includegraphics[width=\textwidth]{fig/perf_409_debug_999.png}
+  \includegraphics[width=\textwidth]{fig/ack_comp_ska.png}
   \caption{Flame graph for Ackermann function computation with \texttt{\%ska} hint.}
   \label{fig:ackermann_ska}
 \end{figure}
+
+\section{Conclusion and future work}
+% \sloppy
+There appear to be two viable future directions for this project.  A short-term objective is a proper integration with the Vere runtime, such as making compiled \textsc{ska} bytecode caches {persistent} and integrating cold states of Vere and \textsc{ska}.  A longer-term direction would pursue \patp{ritpub-sipsyl}'s original vision by implementing \textsc{ssa ir} compilation, which would ameliorate \mbox{allocation} overhead caused by cell churning\footnote{Compare the rationale for the implementation of the \lstinline[style=inlinecode]{#} hax edit instruction in Nock 4K as explained by \patp{fodwyt-ragful}.  (See \patp{lagrev-nocfep} and \patp{sorreg-namtyv}, ``A Documentary History of the Nock Combinator Calculus'', \ssc{ustj} vol. 2 iss. 1, pp.~75–82, for historical context.)} during temporary core construction for calls and deconstruction to get function arguments.\tombstone
 
 \selectlanguage{USenglish}
 \printbibliography
