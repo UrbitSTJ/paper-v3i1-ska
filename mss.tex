@@ -44,6 +44,8 @@
 \thispagestyle{firststyle}
 
 \begin{abstract}
+  \sloppy
+Classic Nock execution sees all function calls evaluate code dynamically.  In practice, most Nock call sites have statically known code products given the subject.  Subject Knowledge Analysis (\textsc{ska}) is a static analysis pass to construct a call graph and subject mask from a subject-formula pair.  The call graph facilitates direct calls in the bytecode interpreter and compile-time jet matching.  The mask determines if two subject-formula pairs are equivalent to enable reuse of analysis results.  \textsc{ska} unlocks ample Nock performance gains.
 \end{abstract}
 
 % We will adjust page numbering in final editing.
@@ -197,6 +199,22 @@ The abstract call graph may contain cycles.  Figure \ref{fig:dec-abstract} shows
 
 When we traverse that call graph, we cannot simply follow the edge from \lstinline[style=inlinecode]{$:dec} to itself, as doing so would cause an infinite loop in the algorithm.  Instead, when we detect a loop call, or a \emph{backedge}, we immediately return an unknown result from the child call.  As we traverse the call graph, we enumerate the vertices, as shown in Figure \ref{fig:dec-ska}.
 
+Figure \ref{fig:dec-ska} also demonstrates that the \textsc{ska} representation of the call graph is acyclic: back-pointing edges are replaced with a forward-pointing edge to a new vertex that we do not analyze through.  Together with the fact that both branches are traversed in Nock 6 analysis, \textsc{ska} call graph traversal becomes a genuine depth-first, head-first traversal.
+
+\subsection{Loops as strongly connected components}
+
+From the point of view of the abstract, cyclical call graph, a set of functions that cannot be finalized unless all functions from this set are finalized forms a strongly-connected component (\textsc{scc}) of that call graph.  Thus, handling of loops in \textsc{ska} becomes a question of handling \textsc{scc}s.  The algorithm that follows was developed by the author to detect and manage \textsc{scc}s during the analysis.  The process turned out to be quite similar to \citeauthor{Tarjan1972}'s \citeyear{Tarjan1972} algorithm for finding \textsc{scc}s with some differences:
+\begin{itemize}
+  \item  In Tarjan's algorithm, the graph is known ahead of time, while in \textsc{ska} the graph is simultaneously inferred with symbolic execution of Nock and traversed.
+  \item  Since Nock call graph is rooted, only one traversal is necessary, and in this traversal the descendants down the non-loop call edges are guaranteed to have higher index values.
+\end{itemize}
+
+The latter fact allows for simpler comparisons and simpler state management, allowing to have a stack of \textsc{scc}s instead of a stack of vertices that are popped when an \textsc{scc} is finalized. For example, when returning from a vertex which is a member of a non-trivial \textsc{scc} in \textsc{ska} we only have to check one boolean value and compare the index of this vertex with the index of the entry of the current \textsc{scc} with equality operator, so we do not have to call arithmetic functions and pay Nock function call overhead.
+
+As the call graph is traversed, we keep track of the stack of mutually independent \textsc{scc}s (that is, \textsc{scc}s whose unions are not \textsc{scc}s) by keeping track of
+the entry point (the earliest vertex that has a backedge pointing to it) and the
+\emph{latch} (the latest vertex that has a backedge originating from it).
+
 \begin{figure}[h]
   \centering
   % \includegraphics[width=0.8\textwidth]{fig/dec-ska.png}
@@ -225,22 +243,6 @@ When we traverse that call graph, we cannot simply follow the edge from \lstinli
   \caption{Call graph for \texttt{(dec 42)} in the middle of\textsc{ska}. Vertices \texttt{0x2} and \texttt{0x3} form a loop (strongly connected component, \textsc{scc}) with vertex \texttt{0x2} being the entry point (magenta), and vertex \texttt{0x3} being the latest (i.e. rightmost, deepest) vertex that belongs to that \textsc{scc}, also called a \emph{latch} of this \textsc{scc} (orange). The dashed gray line denotes the loop assumptions that are to be validated upon exit from the \textsc{scc} entry point. Vertex \texttt{0x3} is not analyzed through.}
   \label{fig:dec-ska}
 \end{figure}
-
-Figure \ref{fig:dec-ska} also demonstrates that the \textsc{ska} representation of the call graph is acyclic: back-pointing edges are replaced with a forward-pointing edge to a new vertex that we do not analyze through.  Together with the fact that both branches are traversed in Nock 6 analysis, \textsc{ska} call graph traversal becomes a genuine depth-first, head-first traversal.
-
-\subsection{Loops as strongly connected components}
-
-From the point of view of the abstract, cyclical call graph, a set of functions that cannot be finalized unless all functions from this set are finalized forms a strongly-connected component (\textsc{scc}) of that call graph.  Thus, handling of loops in \textsc{ska} becomes a question of handling \textsc{scc}s.  The algorithm that follows was developed by the author to detect and manage \textsc{scc}s during the analysis.  The process turned out to be quite similar to \citeauthor{Tarjan1972}'s \citeyear{Tarjan1972} algorithm for finding \textsc{scc}s with some differences:
-\begin{itemize}
-  \item  In Tarjan's algorithm, the graph is known ahead of time, while in \textsc{ska} the graph is simultaneously inferred with symbolic execution of Nock and traversed.
-  \item  Since Nock call graph is rooted, only one traversal is necessary, and in this traversal the descendants down the non-loop call edges are guaranteed to have higher index values.
-\end{itemize}
-
-The latter fact allows for simpler comparisons and simpler state management, allowing to have a stack of \textsc{scc}s instead of a stack of vertices that are popped when an \textsc{scc} is finalized. For example, when returning from a vertex which is a member of a non-trivial \textsc{scc} in \textsc{ska} we only have to check one boolean value and compare the index of this vertex with the index of the entry of the current \textsc{scc} with equality operator, so we do not have to call arithmetic functions and pay Nock function call overhead.
-
-As the call graph is traversed, we keep track of the stack of mutually independent \textsc{scc}s (that is, \textsc{scc}s whose unions are not \textsc{scc}s) by keeping track of
-the entry point (the earliest vertex that has a backedge pointing to it) and the
-\emph{latch} (the latest vertex that has a backedge originating from it).
 
 Suppose that we encounter a new backedge.  To determine whether it forms a new \textsc{scc}, or belongs to an already existing one, it is sufficient to compare the parent vertex enumeration label with the latch of the latest \textsc{scc} on the loop stack.  If the parent vertex is greater than the latch, a new \textsc{scc} data structure is pushed on the stack; otherwise, the top \textsc{scc}'s entry and latch are updated, and then that \textsc{scc} is repeatedly merged with the one beneath it if the connection condition is satisfied: the entry of the updated \textsc{scc} is less than or equal to the latch of the preceding \textsc{scc}.
 
